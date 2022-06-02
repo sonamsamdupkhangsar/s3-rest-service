@@ -9,8 +9,9 @@ RUN ["mvn", "clean", "install"]
 
 FROM openjdk:16
 WORKDIR /app
-COPY --from=build /app/target/project-rest-service-1.0-SNAPSHOT.jar /app/project-rest-service.jar
+COPY --from=build /app/target/s3-rest-service-1.0-SNAPSHOT.jar /app/s3-rest-service.jar
 EXPOSE 8080
 
-ENTRYPOINT [ "java", "-jar", "/app/project-rest-service.jar"]
+ENTRYPOINT [ "java", "-jar", "/app/s3-rest-service.jar"]
 
+LABEL org.opencontainers.image.source https://github.com/sonamsamdupkhangsar/s3-rest-service

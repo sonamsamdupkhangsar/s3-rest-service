@@ -17,10 +17,14 @@ management:
 server:
   port: 8080
 
-spring:
-  r2dbc:
-    url: r2dbc:postgresql://${POSTGRES_SERVICE}/${POSTGRES_DBNAME}
-    username: ${POSTGRES_USERNAME}
-    password: ${POSTGRES_PASSWORD}
-    properties:
-      sslMode: REQUIRE
+aws:
+  s3:
+    regionUrl: https://sfo2.digitaloceanspaces.com
+    accessKeyId: ${accessKeyId}
+    secretAccessKey: ${secretAccessKey}
+    bucket: sonam
+    endpoint: ${endpoint}
+    subdomain: ${subdomain}
+    videoPath: videoapp/1/
+    imageAclHeader: x-amz-acl
+    imageAclValue: public-read

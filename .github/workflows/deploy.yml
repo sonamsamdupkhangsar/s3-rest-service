@@ -1,11 +1,9 @@
 on:
   push:
     branches:
-      - develop
       - main
 
 jobs:
-
   build:
     name: Build, push, and deploy
     runs-on: ubuntu-latest
@@ -60,9 +58,10 @@ jobs:
             --set "image.repository=ghcr.io/${{github.repository}}" \
             --set "image.tag=latest" \
             --set "project=$PROJECT_NAME" \
-            --set "postgres.secretfile=${{ secrets.POSTGRES_SECRET_FILE }}" \
-            --set "postgres.service=${{ secrets.POSTGRES_SERVICE }}" \
-            --set "postgres.dbname=${{ secrets.POSTGRES_DBNAME }}" \
+            --set "secretenvs[0].name=accessKeyId" --set "secretenvs[0].value=${{ secrets.ACCESS_KEY_ID }}" \
+            --set "secretenvs[1].name=secretAccessKey" --set "secretenvs[1].value=${{ secrets.SECRET_ACCESS_KEY }}" \
+            --set "secretenvs[1].name=endpoint" --set "secretenvs[1].value=${{ secrets.ENDPOINT }}" \
+            --set "secretenvs[1].name=subdomain" --set "secretenvs[1].value=${{ secrets.SUBDOMAIN }}" \
              $PROJECT_NAME \
             sonam/mychart -f values.yaml --version 0.1.12 --namespace=backend
 

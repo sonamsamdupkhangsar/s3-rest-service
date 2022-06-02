@@ -1,1 +1,0 @@
-CREATE TABLE if not exists Account (id UUID PRIMARY KEY, user_id UUID, active boolean, access_date_time timestamp);

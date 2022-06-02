@@ -1,4 +1,4 @@
-# project-rest-service
+# s3-rest-service
 
 This is a template project for starting a Spring Webflux with R2DBC for Posgresql Maven based project.
 
@@ -18,18 +18,18 @@ mvn spring-boot:run  -Dspring-boot.run.arguments="--POSTGRES_USERNAME=dummy \
 Build docker image using included Dockerfile.
 
 
-`docker build -t imageregistry/project-rest-service:1.0 .` 
+`docker build -t ghcr.io/project-rest-service:1.0 .` 
 
 ## Push Docker image to repository
 
-`docker push imageregistry/project-rest-service:1.0`
+`docker push ghcr.io/project-rest-service:1.0`
 
 ## Deploy Docker image locally
 
 `docker run -e POSTGRES_USERNAME=dummy \
  -e POSTGRES_PASSWORD=dummy -e POSTGRES_DBNAME=account \
   -e POSTGRES_SERVICE=localhost:5432 \
- --publish 8080:8080 imageregistry/project-rest-service:1.0`
+ --publish 8080:8080 ghcr.io/project-rest-service:1.0`
 
 
 ## Installation on Kubernetes
