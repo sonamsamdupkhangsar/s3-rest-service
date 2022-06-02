@@ -60,8 +60,8 @@ jobs:
             --set "project=$PROJECT_NAME" \
             --set "secretenvs[0].name=accessKeyId" --set "secretenvs[0].value=${{ secrets.ACCESS_KEY_ID }}" \
             --set "secretenvs[1].name=secretAccessKey" --set "secretenvs[1].value=${{ secrets.SECRET_ACCESS_KEY }}" \
-            --set "secretenvs[1].name=endpoint" --set "secretenvs[1].value=${{ secrets.ENDPOINT }}" \
-            --set "secretenvs[1].name=subdomain" --set "secretenvs[1].value=${{ secrets.SUBDOMAIN }}" \
+            --set "secretenvs[2].name=endpoint" --set "secretenvs[2].value=${{ secrets.ENDPOINT }}" \
+            --set "secretenvs[3].name=subdomain" --set "secretenvs[3].value=${{ secrets.SUBDOMAIN }}" \
              $PROJECT_NAME \
             sonam/mychart -f values-backend.yaml --version 0.1.15 --namespace=backend
 
