@@ -63,6 +63,6 @@ jobs:
             --set "secretenvs[1].name=endpoint" --set "secretenvs[1].value=${{ secrets.ENDPOINT }}" \
             --set "secretenvs[1].name=subdomain" --set "secretenvs[1].value=${{ secrets.SUBDOMAIN }}" \
              $PROJECT_NAME \
-            sonam/mychart -f values.yaml --version 0.1.12 --namespace=backend
+            sonam/mychart -f values-backend.yaml --version 0.1.15 --namespace=backend
 
 
