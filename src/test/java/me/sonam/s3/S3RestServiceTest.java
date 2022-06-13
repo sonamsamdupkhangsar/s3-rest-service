@@ -46,7 +46,7 @@ public class S3RestServiceTest {
 
         client = client.mutate().responseTimeout(Duration.ofSeconds(10)).build();
 
-        client.post().uri("/upload/video")
+        client.post().uri("/upload")
                 .header("filename", video.getFilename())
                 .header("format", "video/mp4")
                 .header(HttpHeaders.CONTENT_LENGTH, ""+video.contentLength())
@@ -54,6 +54,19 @@ public class S3RestServiceTest {
                 .exchange().expectStatus().isOk()
                 .expectBody(String.class)
                 .consumeWith(stringEntityExchangeResult -> LOG.info("result: {}", stringEntityExchangeResult.getResponseBody()));
+
+
+    }
+
+    @Test
+    public void getPresignUrl() {
+        LOG.info("create presign url");
+
+        client.post().uri("/presignurl").bodyValue("videoapp/1/video/2022-06-13T11:23:44.893698.mp4")
+                .exchange().expectStatus().isOk()
+                .expectBody(String.class)
+                .consumeWith(stringEntityExchangeResult -> LOG.info("presignUrl: {}", stringEntityExchangeResult.getResponseBody()));
+
     }
 
     @Test

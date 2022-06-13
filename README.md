@@ -1,6 +1,6 @@
 # s3-rest-service
 
-This is a template project for starting a Spring Webflux with R2DBC for Posgresql Maven based project.
+This is a s3 rest service for uploading files to s3 bucket and creating presigned url for s3 objects.
 
 
 ## Run locally

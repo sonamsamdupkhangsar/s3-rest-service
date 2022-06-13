@@ -15,4 +15,5 @@ public interface S3Service {
     Mono<String> createThumbnail(String fileKey);
     //this does not work yet, creates the file on s3 but nothing is in it
     Mono<String> createGif(String fileKey);
+    Mono<String> createPresignedUrl(Mono<String> fileKeyMono);
 }

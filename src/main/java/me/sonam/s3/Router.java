@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
 import static org.springframework.web.reactive.function.server.RequestPredicates.accept;
 
@@ -32,7 +33,7 @@ public class Router {
     @Bean
     @RouterOperations(
             {
-                    @RouterOperation(path = "/upload/video"
+                    @RouterOperation(path = "/upload"
                             , produces = {
                             MediaType.APPLICATION_JSON_VALUE}, method= RequestMethod.GET,
                             operation = @Operation(operationId="upload", responses = {
@@ -50,8 +51,10 @@ public class Router {
     )
     public RouterFunction<ServerResponse> route(S3Handler handler) {
         LOG.info("building router function");
-        return RouterFunctions.route(POST("/upload/video").and(accept(MediaType.APPLICATION_JSON)),
+        return RouterFunctions.route(POST("/upload").and(accept(MediaType.APPLICATION_JSON)),
                 handler::uploadVideo)
+                .andRoute(POST("/presignurl").and(accept(MediaType.APPLICATION_JSON)),
+                        handler::getPresignUrl)
                 .andRoute(POST("/upload/video/thumbnail").and(accept(MediaType.APPLICATION_JSON)),
                         handler::uploadVideoAndCreateThumbnail);
     }

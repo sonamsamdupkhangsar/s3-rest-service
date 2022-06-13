@@ -41,6 +41,16 @@ public class S3Handler {
                         .fromValue(e.getMessage())));
     }
 
+    public Mono<ServerResponse> getPresignUrl(ServerRequest serverRequest) {
+        LOG.info("get presignurl");
+
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(s3Service.createPresignedUrl(serverRequest.body(BodyExtractors.toMono(String.class))),
+                        String.class)
+                .onErrorResume(e -> ServerResponse.badRequest().body(BodyInserters
+                        .fromValue(e.getMessage())));
+    }
+
     /**
      * this method will upload the video as s3 object.
      * Then it will create a thumbnail for that video using the key from uploaded video.

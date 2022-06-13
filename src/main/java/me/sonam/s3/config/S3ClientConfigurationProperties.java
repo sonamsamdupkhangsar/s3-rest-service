@@ -2,6 +2,8 @@ package me.sonam.s3.config;
 
 import java.net.URI;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 
@@ -13,6 +15,8 @@ import software.amazon.awssdk.regions.Region;
 @ConfigurationProperties(prefix = "aws.s3")
 
 public class S3ClientConfigurationProperties {
+    private static final Logger LOG = LoggerFactory.getLogger(S3ClientConfigurationProperties.class);
+
 
     private Region region;// = Region.of("https://sfo2.digitaloceanspaces.com");
     private URI endpoint = null;
@@ -30,6 +34,8 @@ public class S3ClientConfigurationProperties {
     private String fileAclHeader;
     private String fileAclValue;
 
+    private int presignDurationInMinutes;
+
     // AWS S3 requires that file parts must have at least 5MB, except
     // for the last part. This may change for other S3-compatible services, so let't
     // define a configuration property for that
@@ -37,7 +43,11 @@ public class S3ClientConfigurationProperties {
 
     public Region getRegion() {
         if (this.region == null) {
+            LOG.info("regionUrl: {}", regionUrl);
             region = Region.of(regionUrl);
+        }
+        else {
+            LOG.info("region set already: {}", region.toString());
         }
         return region;
     }
@@ -124,5 +134,13 @@ public class S3ClientConfigurationProperties {
 
     public void setFileAclValue(String fileAclValue) {
         this.fileAclValue = fileAclValue;
+    }
+
+    public int getPresignDurationInMinutes() {
+        return this.presignDurationInMinutes;
+    }
+
+    public void setPresignDurationInMinutes(int presignDurationInMinutes) {
+        this.presignDurationInMinutes = presignDurationInMinutes;
     }
 }

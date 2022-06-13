@@ -18,18 +18,27 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyExtractors;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.URI;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +58,30 @@ public class S3FileUploadService implements S3Service {
 
     @Autowired
     private S3ClientConfigurationProperties s3config;
+
+    @Autowired
+    private AwsCredentialsProvider awsCredentialsProvider;
+
+    private S3Presigner s3Presigner;
+
+    @PostConstruct
+    public void setPresigner() {
+        LOG.info("create s3Presigner");
+        // Create an S3Presigner using the default region and credentials.
+        // This is usually done at application startup, because creating a presigner can be expensive.
+
+        this.s3Presigner = S3Presigner.builder()
+                .region(s3config.getRegion())
+                .endpointOverride(s3config.getEndpoint())
+                .credentialsProvider(awsCredentialsProvider)
+                .build();
+    }
+
+    @PreDestroy
+    public void closePresigner() {
+        LOG.info("close s3Presigner");
+        s3Presigner.close();
+    }
 
     @Override
     public Mono<String> uploadVideo(Flux<ByteBuffer> body, String fileName, String format, OptionalLong optionalLong) {
@@ -179,6 +212,26 @@ public class S3FileUploadService implements S3Service {
             LOG.error("exception occured", e);
             return Mono.just(e.getLocalizedMessage());
         }
+    }
+
+    @Override
+    public Mono<String> createPresignedUrl(Mono<String> fileKeyMono) {
+        LOG.info("create presignurl for key");
+
+        return fileKeyMono.flatMap(fileKey -> {
+
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(s3config.getBucket()).key(fileKey).build();
+
+            GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder().
+                    signatureDuration(Duration.ofMinutes(s3config.getPresignDurationInMinutes()))
+                    .getObjectRequest(getObjectRequest).build();
+
+            PresignedGetObjectRequest presignedGetObjectRequest =
+                    s3Presigner.presignGetObject(getObjectPresignRequest);
+
+            LOG.info("Presigned URL: {}", presignedGetObjectRequest.url());
+            return Mono.just(presignedGetObjectRequest.url().toString());
+        });
     }
 
 

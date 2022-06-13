@@ -1,5 +1,7 @@
 package me.sonam.s3.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -18,6 +20,8 @@ import java.time.Duration;
 @Configuration
 //@EnableConfigurationProperties(S3ClientConfigurationProperties.class)
 public class S3ClientConfiguration {
+    private static final Logger LOG = LoggerFactory.getLogger(S3ClientConfiguration.class);
+
     @Bean
     public S3AsyncClient s3client(S3ClientConfigurationProperties s3props,
                                   AwsCredentialsProvider credentialsProvider) {
@@ -45,11 +49,13 @@ public class S3ClientConfiguration {
 
         if (StringUtils.isBlank(s3props.getAccessKeyId())) {
             // Return default provider
+            LOG.warn("creating default credentials provider");
             return DefaultCredentialsProvider.create();
         }
         else {
             // Return custom credentials provider
             return () -> {
+                LOG.info("returning custom credentials provider");
                 AwsCredentials creds = AwsBasicCredentials.create(  s3props.getAccessKeyId(), s3props.getSecretAccessKey());
                 return creds;
             };

@@ -19,7 +19,7 @@ server:
 
 aws:
   s3:
-    regionUrl: https://sfo2.digitaloceanspaces.com
+    region: https://sfo2.digitaloceanspaces.com
     accessKeyId: ${accessKeyId}
     secretAccessKey: ${secretAccessKey}
     bucket: sonam
@@ -28,3 +28,4 @@ aws:
     videoPath: videoapp/1/
     imageAclHeader: x-amz-acl
     imageAclValue: public-read
+    presignDurationInMinutes: 60
