@@ -1,56 +1,36 @@
 # s3-rest-service
 
-This is a s3 rest service for uploading files to s3 bucket and creating presigned url for s3 objects.
-
+This is a s3 rest service for uploading files to s3 bucket and creating presigned url for s3 objects
+on DigitalOcean Spaces - a block storage solution similar to S3 service.
 
 ## Run locally
 
 ```
-mvn spring-boot:run  -Dspring-boot.run.arguments="--POSTGRES_USERNAME=dummy \
-                      --POSTGRES_PASSWORD=dummy \
-                      --POSTGRES_DBNAME=account \
-                      --POSTGRES_SERVICE=localhost:5432"
+mvn spring-boot:run  -Dspring-boot.run.arguments="--accessKeyId=$DIGITALOCEAN_SPACES_ACCESS_KEY_ID \
+                      --secretAccessKey=$DIGITALOCEAN_SPACES_SECRET_ACCESS_KEY \
+                      --endpoint=$DIGITALOCEAN_SPACES_ENDPOINT \
+                      --subdomain=$DIGITALOCEAN_SPACES_SUBDOMAIN"
 ```
  
  
 ## Build Docker image
-
 Build docker image using included Dockerfile.
 
-
-`docker build -t ghcr.io/project-rest-service:1.0 .` 
+`docker build -t ghcr.io/s3-rest-service:latest .` 
 
 ## Push Docker image to repository
-
-`docker push ghcr.io/project-rest-service:1.0`
+`docker push ghcr.io/s3-rest-service:latest`
 
 ## Deploy Docker image locally
 
-`docker run -e POSTGRES_USERNAME=dummy \
- -e POSTGRES_PASSWORD=dummy -e POSTGRES_DBNAME=account \
-  -e POSTGRES_SERVICE=localhost:5432 \
- --publish 8080:8080 ghcr.io/project-rest-service:1.0`
+`docker run -e accessKeyId=$DIGITALOCEAN_SPACES_ACCESS_KEY_ID \
+ -e secretAccessKey=$DIGITALOCEAN_SPACES_SECRET_ACCESS_KEY -e endpoint=$DIGITALOCEAN_SPACES_ENDPOINT \ 
+ --publish 8080:8080 ghcr.io/s3-rest-service:latest`
 
 
 ## Installation on Kubernetes
 Use my Helm chart here @ [sonam-helm-chart](https://github.com/sonamsamdupkhangsar/sonam-helm-chart):
 
 ```
-helm install project-api sonam/mychart -f values.yaml --version 0.1.12 --namespace=yournamespace
-```
-
-##Instruction for port-forwarding database pod
-```
-export PGMASTER=$(kubectl get pods -o jsonpath={.items..metadata.name} -l application=spilo,cluster-name=project-minimal-cluster,spilo-role=master -n yournamesapce); 
-echo $PGMASTER;
-kubectl port-forward $PGMASTER 6432:5432 -n backend;
-```
-
-###Login to database instruction
-```
-export PGPASSWORD=$(kubectl get secret <SECRET_NAME> -o 'jsonpath={.data.password}' -n backend | base64 -d);
-echo $PGPASSWORD;
-export PGSSLMODE=require;
-psql -U <USER> -d projectdb -h localhost -p 6432
-
+helm install s3-rest-service sonam/mychart -f values.yaml --version 0.1.15 --namespace=yournamespace
 ```
