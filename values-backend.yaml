@@ -41,11 +41,13 @@ service:
 istio:
   enabled: false
 
+
 ingress:
   enabled: true
   ingressClass: nginx
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/proxy-body-size: "600m"
+    nginx.org/client-max-body-size: "600m"
     nginx.ingress.kubernetes.io/auth-url: http://jwt-rest-service-mychart.backend.svc.cluster.local:80/validate
   hosts:
     - host: s3-rest-service.sonam.cloud
