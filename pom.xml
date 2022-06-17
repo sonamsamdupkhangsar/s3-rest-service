@@ -84,6 +84,18 @@
             <artifactId>animated-gif-lib</artifactId>
             <version>1.4</version>
         </dependency>
+        <dependency>
+            <groupId>au.com.dius</groupId>
+            <artifactId>pact-jvm-consumer-junit5</artifactId>
+            <version>4.0.10</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>au.com.dius</groupId>
+            <artifactId>pact-jvm-provider-junit5</artifactId>
+            <version>4.0.10</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -104,12 +116,29 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
+                <groupId>au.com.dius</groupId>
+                <artifactId>pact-jvm-provider-maven</artifactId>
+                <version>4.0.0</version>
                 <configuration>
-                    <source>10</source>
-                    <target>10</target>
+                    <pactDirectory>target/pacts</pactDirectory>
+                    <pactBrokerUrl>${pactbrokerurl}</pactBrokerUrl>
+                    <pactBrokerUsername>${pactbrokerusername}</pactBrokerUsername>
+                    <pactBrokerPassword>${pactbrokerpassword}</pactBrokerPassword>
+                    <projectVersion>v1</projectVersion>
+                    <serviceProviders>
+                        <serviceProvider>
+                            <name>jwt-rest-service</name>
+                            <pactBrokerUrl>${pactbrokerurl}</pactBrokerUrl>
+                        </serviceProvider>
+                    </serviceProviders>
+                    <tags>
+                        <tag>prod</tag>
+                    </tags>
+                    <configuration>
+                        <pact.verifier.publishResults>true</pact.verifier.publishResults>
+                    </configuration>
                 </configuration>
             </plugin>
         </plugins>

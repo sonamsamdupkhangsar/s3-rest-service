@@ -7,7 +7,7 @@ COPY src ./src
 
 RUN ["mvn", "clean", "install"]
 
-FROM openjdk:16
+FROM openjdk:17
 WORKDIR /app
 COPY --from=build /app/target/s3-rest-service-1.0-SNAPSHOT.jar /app/s3-rest-service.jar
 EXPOSE 8080
