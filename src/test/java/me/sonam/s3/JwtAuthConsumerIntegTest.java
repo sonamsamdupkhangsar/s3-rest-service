@@ -56,10 +56,10 @@ public class JwtAuthConsumerIntegTest {
                 .path("/validate")
                 .matchHeader("Authorization", "Bearer .*",  "Bearer eyJraWQiOiJ0aGlzLWlzLXJ")
                 //the following match header identifies the actual service being consumed by the caller service,
-                // so provider-service-id does not represent jwt validator service but the actual service that is going to be
+                // so provider-id does not represent jwt validator service but the actual service that is going to be
                 // consumed
-                .matchHeader("consumer-service-id", ".*", "1234-uuid-stri-glen")//caller service id
-                .matchHeader("provider-service-id", ".*", "5678-uuid-stri-glen")//provider service id
+                .matchHeader("consumer-id", ".*", "1234-uuid-stri-glen")//caller id
+                .matchHeader("provider-id", ".*", "5678-uuid-stri-glen")//provider id
                 .method("GET")
                 .willRespondWith()
                 .matchHeader("Content-Type", "application/json")
@@ -93,8 +93,8 @@ public class JwtAuthConsumerIntegTest {
         LOG.info("starting mock server");
         HttpResponse httpResponse = Request.Get(mockServer.getUrl() + "/validate")
                   .addHeader("Authorization", "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzb25hbSIsImlzcyI6InNvbmFtLmNsb3VkIiwiYXVkIjoic29uYW0uY2xvdWQiLCJqdGkiOiJmMTY2NjM1OS05YTViLTQ3NzMtOWUyNy00OGU0OTFlNDYzNGIifQ.KGFBUjghvcmNGDH0eM17S9pWkoLwbvDaDBGAx2AyB41yZ_8-WewTriR08JdjLskw1dsRYpMh9idxQ4BS6xmOCQ")
-                .addHeader("consumer-service-id", UUID.randomUUID().toString())
-                .addHeader("provider-service-id", UUID.randomUUID().toString())
+                .addHeader("consumer-id", UUID.randomUUID().toString())
+                .addHeader("provider-id", UUID.randomUUID().toString())
                 .execute()
                 .returnResponse();
 
