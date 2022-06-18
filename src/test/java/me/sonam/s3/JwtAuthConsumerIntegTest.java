@@ -54,7 +54,7 @@ public class JwtAuthConsumerIntegTest {
         return builder
                 .uponReceiving("validate jwt header")
                 .path("/validate")
-                .matchHeader("Authorization", "Bearer .*",  "Bearer eyJraWQiOiJ0aGlzLWlzLXJ")
+                .matchHeader("Authorization", "Bearer .*",  "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzb25hbSIsImlzcyI6InNvbmFtLmNsb3VkIiwiYXVkIjoic29uYW0uY2xvdWQiLCJqdGkiOiJmMTY2NjM1OS05YTViLTQ3NzMtOWUyNy00OGU0OTFlNDYzNGIifQ.KGFBUjghvcmNGDH0eM17S9pWkoLwbvDaDBGAx2AyB41yZ_8-WewTriR08JdjLskw1dsRYpMh9idxQ4BS6xmOCQ")
                 .method("GET")
                 .willRespondWith()
                 .matchHeader("Content-Type", "application/json")
