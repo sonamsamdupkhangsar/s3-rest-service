@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyExtractors;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Flux;
@@ -31,24 +30,24 @@ public class S3Handler {
 
         Flux<ByteBuffer> byteBufferFlux = serverRequest.body(BodyExtractors.toFlux(ByteBuffer.class));
 
-        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(s3Service.uploadVideo(byteBufferFlux,
-                        serverRequest.headers().firstHeader("filename"),
-                        serverRequest.headers().firstHeader("format"),
-                        serverRequest.headers().contentLength()),
-                        String.class)
-                .onErrorResume(e -> ServerResponse.badRequest().body(BodyInserters
-                        .fromValue(e.getMessage())));
+        return s3Service.uploadVideo(byteBufferFlux,
+                serverRequest.headers().firstHeader("filename"),
+                serverRequest.headers().firstHeader("format"),
+                serverRequest.headers().contentLength())
+                .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                .onErrorResume(throwable -> ServerResponse.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(throwable.getMessage()));
     }
 
     public Mono<ServerResponse> getPresignUrl(ServerRequest serverRequest) {
         LOG.info("get presignurl");
 
-        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(s3Service.createPresignedUrl(serverRequest.body(BodyExtractors.toMono(String.class))),
-                        String.class)
-                .onErrorResume(e -> ServerResponse.badRequest().body(BodyInserters
-                        .fromValue(e.getMessage())));
+        return s3Service.createPresignedUrl(serverRequest.body(BodyExtractors.toMono(String.class)))
+                .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                .onErrorResume(throwable -> ServerResponse.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(throwable.getMessage()));
     }
 
     /**
@@ -62,14 +61,16 @@ public class S3Handler {
 
         Flux<ByteBuffer> byteBufferFlux = serverRequest.body(BodyExtractors.toFlux(ByteBuffer.class));
 
-        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(s3Service.uploadVideo(byteBufferFlux,
-                        serverRequest.headers().firstHeader("filename"),
-                        serverRequest.headers().firstHeader("format"),
-                        serverRequest.headers().contentLength()).doOnNext(s -> s3Service.createThumbnail(s)),
-                        String.class)
-                .onErrorResume(e -> ServerResponse.badRequest().body(BodyInserters
-                        .fromValue(e.getMessage())));
+        return s3Service.uploadVideo(byteBufferFlux,
+                serverRequest.headers().firstHeader("filename"),
+                serverRequest.headers().firstHeader("format"),
+                serverRequest.headers().contentLength())
+                .flatMap(fileKey -> s3Service.createThumbnail(fileKey))
+                .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                .onErrorResume(throwable -> ServerResponse.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(throwable.getMessage()));
+
     }
 
 }

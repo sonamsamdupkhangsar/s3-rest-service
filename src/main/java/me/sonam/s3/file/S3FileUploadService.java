@@ -62,20 +62,8 @@ public class S3FileUploadService implements S3Service {
     @Autowired
     private AwsCredentialsProvider awsCredentialsProvider;
 
+    @Autowired
     private S3Presigner s3Presigner;
-
-    @PostConstruct
-    public void setPresigner() {
-        LOG.info("create s3Presigner");
-        // Create an S3Presigner using the default region and credentials.
-        // This is usually done at application startup, because creating a presigner can be expensive.
-
-        this.s3Presigner = S3Presigner.builder()
-                .region(s3config.getRegion())
-                .endpointOverride(s3config.getEndpoint())
-                .credentialsProvider(awsCredentialsProvider)
-                .build();
-    }
 
     @PreDestroy
     public void closePresigner() {

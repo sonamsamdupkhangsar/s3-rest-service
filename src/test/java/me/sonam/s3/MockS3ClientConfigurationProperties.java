@@ -1,22 +1,20 @@
-package me.sonam.s3.config;
-
-import java.net.URI;
+package me.sonam.s3;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
-
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.regions.Region;
 
-@Profile("default")
+import java.net.URI;
+
+
 @Configuration
 @ConfigurationProperties(prefix = "aws.s3")
-
-public class S3ClientConfigurationProperties {
-    private static final Logger LOG = LoggerFactory.getLogger(S3ClientConfigurationProperties.class);
+@Profile("test")
+public class MockS3ClientConfigurationProperties {
+    private static final Logger LOG = LoggerFactory.getLogger(MockS3ClientConfigurationProperties.class);
 
 
     private Region region;// = Region.of("https://sfo2.digitaloceanspaces.com");
@@ -43,13 +41,7 @@ public class S3ClientConfigurationProperties {
     private int multipartMinPartSize = 5*1024*1024;
 
     public Region getRegion() {
-        if (this.region == null) {
-            LOG.info("regionUrl: {}", regionUrl);
-            region = Region.of(regionUrl);
-        }
-        else {
-            LOG.info("region set already: {}", region.toString());
-        }
+
         return region;
     }
 

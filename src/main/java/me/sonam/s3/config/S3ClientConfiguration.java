@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -13,12 +14,13 @@ import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.utils.StringUtils;
 
 import java.time.Duration;
 
+@Profile("default")
 @Configuration
-//@EnableConfigurationProperties(S3ClientConfigurationProperties.class)
 public class S3ClientConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(S3ClientConfiguration.class);
 
@@ -61,4 +63,19 @@ public class S3ClientConfiguration {
             };
         }
     }
+
+
+    @Bean
+    public S3Presigner s3Presigner(S3ClientConfigurationProperties s3props) {
+        LOG.info("create s3Presigner");
+        // Create an S3Presigner using the default region and credentials.
+        // This is usually done at application startup, because creating a presigner can be expensive.
+
+        return S3Presigner.builder()
+                .region(s3props.getRegion())
+                .endpointOverride(s3props.getEndpoint())
+                .credentialsProvider(awsCredentialsProvider(s3props))
+                .build();
+    }
+
 }
