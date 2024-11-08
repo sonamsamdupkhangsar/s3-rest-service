@@ -25,12 +25,14 @@ public class S3ClientConfigurationProperties {
     private String regionUrl;
     private String accessKeyId;
     private String secretAccessKey;
-    private String subdomain;
+    private URI subdomain;
 
-    // Bucket name we'll be using as our backend storage
+    // this resolves to a folder name, not the actual s3 bucket (confusing ?)
     private String bucket;
 
     private String videoPath;
+    private String photoPath;
+    private String filePath;
 
     private String fileAclHeader;
     private String fileAclValue;
@@ -89,11 +91,11 @@ public class S3ClientConfigurationProperties {
         this.secretAccessKey = secretAccessKey;
     }
 
-    public String getSubdomain() {
+    public URI getSubdomain() {
         return subdomain;
     }
 
-    public void setSubdomain(String subdomain) {
+    public void setSubdomain(URI subdomain) {
         this.subdomain = subdomain;
     }
 
@@ -143,5 +145,21 @@ public class S3ClientConfigurationProperties {
 
     public void setPresignDurationInMinutes(int presignDurationInMinutes) {
         this.presignDurationInMinutes = presignDurationInMinutes;
+    }
+
+    public String getPhotoPath() {
+        return photoPath;
+    }
+
+    public void setPhotoPath(String photoPath) {
+        this.photoPath = photoPath;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 }

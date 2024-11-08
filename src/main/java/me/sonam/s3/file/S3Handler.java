@@ -1,5 +1,6 @@
 package me.sonam.s3.file;
 
+import me.sonam.s3.config.S3ClientConfigurationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,32 +13,105 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 @Service
 public class S3Handler {
     private static final Logger LOG = LoggerFactory.getLogger(S3Handler.class);
 
-    @Autowired
-    private S3Service s3Service;
+    private final S3Service s3Service;
+
+    private final S3ClientConfigurationProperties s3ClientConfigurationProperties;
+
+    public S3Handler(S3Service s3Service, S3ClientConfigurationProperties s3ClientConfigurationProperties) {
+        this.s3Service = s3Service;
+        this.s3ClientConfigurationProperties = s3ClientConfigurationProperties;
+    }
+
+    public Mono<ServerResponse> handlerFileupload(ServerRequest serverRequest) {
+        LOG.info("upload file of type: {}", serverRequest.queryParam("upload_type"));
+
+        final Optional<String> optionalUploadType = serverRequest.queryParam("uploadType");
+
+        if (optionalUploadType.isEmpty()) {
+            return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue("upload type not specified");
+        }
+        final String uploadType = optionalUploadType.get();
+        String folder = "";
+
+        if (serverRequest.queryParam("folder").isPresent()) {
+            folder = serverRequest.queryParam("folder").get() + "/";
+            LOG.info("user specified a additional path/folder name: {}", folder);
+        }
+
+        if (uploadType.equalsIgnoreCase("video") || uploadType.equalsIgnoreCase("photo")) {
+
+
+            if (uploadType.equals("video")) {
+                final String prefixPath = s3ClientConfigurationProperties.getVideoPath() + folder;
+
+                return upload(serverRequest, prefixPath)
+                        .doOnNext(s -> LOG.info("Video upload done, creating video thumbnail next."))
+                        .flatMap(fileKey -> s3Service.createPresignedUrl(Mono.just(fileKey)))
+                        .doOnNext(presignedUrl -> LOG.info("presigned url: {}", presignedUrl))
+                        .flatMap(presigneUrl -> s3Service.createGif(presigneUrl, prefixPath))
+                        .doOnNext(s -> LOG.info("Video thumbnail done."))
+                        .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                        .onErrorResume(throwable -> ServerResponse.badRequest()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(throwable.getMessage()));
+            }
+            else {
+                final String prefixPath = s3ClientConfigurationProperties.getPhotoPath() + folder;
+
+                return upload(serverRequest, prefixPath)
+                        .doOnNext(s -> LOG.info("photo upload done, creating photo thumbnail next."))
+                        .flatMap(fileKey -> s3Service.createPresignedUrl(Mono.just(fileKey)))
+                        .doOnNext(presignedUrl -> LOG.info("presigned url: {}", presignedUrl))
+                        .flatMap(fileKey -> s3Service.createPhotoThumbnail(fileKey, prefixPath))
+                        .doOnNext(s -> LOG.info("Photo thumbnail done."))
+                        .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                        .onErrorResume(throwable -> ServerResponse.badRequest()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(throwable.getMessage()));
+            }
+        }
+        else if (uploadType.equalsIgnoreCase("file")) {
+            String prefixPath = s3ClientConfigurationProperties.getFilePath();
+
+            if (serverRequest.queryParam("folder").isPresent()) {
+                prefixPath = prefixPath + serverRequest.queryParam("folder").get() + "/";
+                LOG.info("user specified a additional path/folder name: {}", serverRequest.queryParam("folder").get());
+            }
+
+            return upload(serverRequest, prefixPath)
+                    .doOnNext(s -> LOG.info("file upload done."))
+                    .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
+                    .onErrorResume(throwable -> ServerResponse.badRequest()
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(throwable.getMessage()));
+        }
+        else {
+            return ServerResponse.badRequest().contentType(MediaType.APPLICATION_JSON).bodyValue("upload type invalid '"+ uploadType+"'");
+        }
+    }
 
     /**
-     * this handler will call the service to uplaod file to s3 bucket
+     * This is the shared method called by other file upload method to s3 bucket with folder using prefixPath.
      * @param serverRequest
-     * @return filekey such as 'videoapp/1/video/2022-05-20T21:22:56.184297.mp4'
+     * @param prefixPath
+     * @return is a filekey such as /s3-rest-service/prefixpath/filename.mp4
      */
-    public Mono<ServerResponse> uploadVideo(ServerRequest serverRequest) {
+    private Mono<String> upload(ServerRequest serverRequest, String prefixPath) {
         LOG.info("upload file");
 
         Flux<ByteBuffer> byteBufferFlux = serverRequest.body(BodyExtractors.toFlux(ByteBuffer.class));
 
-        return s3Service.uploadVideo(byteBufferFlux,
-                serverRequest.headers().firstHeader("filename"),
-                serverRequest.headers().firstHeader("format"),
-                serverRequest.headers().contentLength())
-                .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
-                .onErrorResume(throwable -> ServerResponse.badRequest()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(throwable.getMessage()));
+        return s3Service.uploadFile(byteBufferFlux, prefixPath,
+                        serverRequest.headers().firstHeader("filename"),
+                        serverRequest.headers().firstHeader("format"),
+                        serverRequest.headers().contentLength());
+
     }
 
     public Mono<ServerResponse> getPresignUrl(ServerRequest serverRequest) {
@@ -48,29 +122,6 @@ public class S3Handler {
                 .onErrorResume(throwable -> ServerResponse.badRequest()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(throwable.getMessage()));
-    }
-
-    /**
-     * this method will upload the video as s3 object.
-     * Then it will create a thumbnail for that video using the key from uploaded video.
-     * @param serverRequest
-     * @return
-     */
-    public Mono<ServerResponse> uploadVideoAndCreateThumbnail(ServerRequest serverRequest) {
-        LOG.info("upload video and create thumbnail");
-
-        Flux<ByteBuffer> byteBufferFlux = serverRequest.body(BodyExtractors.toFlux(ByteBuffer.class));
-
-        return s3Service.uploadVideo(byteBufferFlux,
-                serverRequest.headers().firstHeader("filename"),
-                serverRequest.headers().firstHeader("format"),
-                serverRequest.headers().contentLength())
-                .flatMap(fileKey -> s3Service.createThumbnail(fileKey))
-                .flatMap(s -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).bodyValue(s))
-                .onErrorResume(throwable -> ServerResponse.badRequest()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(throwable.getMessage()));
-
     }
 
 }

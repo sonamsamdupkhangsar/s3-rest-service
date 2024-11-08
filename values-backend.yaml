@@ -45,19 +45,30 @@ istio:
 ingress:
   enabled: true
   ingressClass: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "600m"
-    nginx.org/client-max-body-size: "600m"
-    nginx.ingress.kubernetes.io/auth-url: http://jwt-rest-service-mychart.backend.svc.cluster.local:80/validate
+  multiIngress: true
   hosts:
     - host: s3-rest-service.sonam.cloud
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: sonam.cloud
-      hosts:
-        - "*.sonam.cloud"
+  - secretName: sonam.cloud
+    hosts:
+      - "*.sonam.cloud"
+
+  - annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "600m"
+      nginx.org/client-max-body-size: "600m"
+    nginx.ingress.kubernetes.io/auth-url: http://jwt-rest-service-mychart.backend.svc.cluster.local:80/validate
+    hosts:
+      - host: s3-rest-service.sonam.cloud
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: sonam.cloud
+        hosts:
+          - "*.sonam.cloud"
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -78,6 +89,17 @@ tolerations: []
 affinity: {}
 
 envs:
+  - name: region
+    value: sfo2
+  - name: bucket
+    value: s3-rest-service
+  - name: videoPath
+    value: videos/
+  - name: photoPath
+    value: photos/
+  - name: filePath
+    value: files/
+
 #  name: accessKeyId
 #  value:
 #     valueFrom:

@@ -1,6 +1,7 @@
 package me.sonam.s3.file;
 
 import com.madgag.gif.fmsware.AnimatedGifEncoder;
+import jakarta.annotation.PreDestroy;
 import me.sonam.s3.config.S3ClientConfigurationProperties;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
@@ -8,31 +9,20 @@ import org.bytedeco.javacv.Java2DFrameConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.BodyExtractors;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
-import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
-import software.amazon.awssdk.core.async.AsyncResponseTransformer;
-import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
@@ -53,17 +43,20 @@ import java.util.concurrent.CompletableFuture;
 public class S3FileUploadService implements S3Service {
     private static final Logger LOG = LoggerFactory.getLogger(S3FileUploadService.class);
 
-    @Autowired
     private S3AsyncClient s3client;
 
-    @Autowired
     private S3ClientConfigurationProperties s3config;
 
-    @Autowired
     private AwsCredentialsProvider awsCredentialsProvider;
 
-    @Autowired
     private S3Presigner s3Presigner;
+
+    public S3FileUploadService(S3AsyncClient s3client, S3ClientConfigurationProperties s3config, AwsCredentialsProvider awsCredentialsProvider, S3Presigner s3Presigner) {
+        this.s3client = s3client;
+        this.s3config = s3config;
+        this.awsCredentialsProvider = awsCredentialsProvider;
+        this.s3Presigner = s3Presigner;
+    }
 
     @PreDestroy
     public void closePresigner() {
@@ -71,79 +64,86 @@ public class S3FileUploadService implements S3Service {
         s3Presigner.close();
     }
 
-    @Override
-    public Mono<String> uploadVideo(Flux<ByteBuffer> body, String fileName, String format, OptionalLong optionalLong) {
-        LOG.info("uploadVideo with filePart");
-        LocalDateTime localDateTime = LocalDateTime.now();
-        String extension = "";
+    public Mono<String> uploadFile(Flux<ByteBuffer> body, String prefixPath, String fileName, String format, OptionalLong optionalLong) {
+            LOG.info("uploadVideo with filePart");
+            LocalDateTime localDateTime = LocalDateTime.now();
+            String extension = "";
+
+            if (fileName.contains(".")) {
+                extension = fileName
+                        .substring(fileName.lastIndexOf(".") + 1);
+            }
+            LOG.info("header.filename: {}", fileName);
 
 
+            String fileKey = prefixPath+localDateTime + "." + extension;
 
-        if (fileName.contains(".")) {
-            extension = fileName
-                    .substring(fileName.lastIndexOf(".") + 1);
-        }
-        LOG.info("header.filename: {}", fileName);
+            LOG.debug("accessKeyId: {}, secretAccessKey: {}, endpoint: {}, region: {}, bucket: {}",
+                    s3config.getAccessKeyId(), s3config.getSecretAccessKey(),
+                    s3config.getEndpoint(), s3config.getRegion(), s3config.getBucket());
 
-        String fileKey = s3config.getVideoPath()+"video/"+localDateTime + "." + extension;
+            long length = optionalLong.getAsLong();
+            LOG.info("length: {}", length);
 
-        LOG.info("accessKeyId: {}, secretAccessKey: {}, endpoint: {}, region: {}, bucket: {}",
-                s3config.getAccessKeyId(), s3config.getSecretAccessKey(),
-                s3config.getEndpoint(), s3config.getRegion(), s3config.getBucket());
+            Map<String, String> metadata = new HashMap<>();
+            metadata.put("Content-Length", ""+length);
+            metadata.put("Content-Type",format);
+            metadata.put("x-amz-acl", "public-read");
 
-        long length = optionalLong.getAsLong();
-        LOG.info("length: {}", length);
+            LOG.info("s3Client: {}", s3client);
 
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("Content-Length", ""+length);
-        metadata.put("Content-Type",format);
-        metadata.put("x-amz-acl", "public-read");
+            CompletableFuture future = s3client
+                    .putObject(PutObjectRequest.builder()
+                                    .bucket(s3config.getBucket())
+                                    .contentLength(length)
+                                    .key(fileKey)
+                                    .contentType(format)
+                                    .metadata(metadata)
+                                    .acl(ObjectCannedACL.PUBLIC_READ)
+                                    .build(),
+                            AsyncRequestBody.fromPublisher(body));
+            return Mono.fromFuture(future).map(response -> {
+                checkResult(response);
 
-        CompletableFuture future = s3client
-                .putObject(PutObjectRequest.builder()
-                                .bucket(s3config.getBucket())
-                                .contentLength(length)
-                                .key(fileKey)
-                                .contentType(format)
-                                .metadata(metadata)
-                                .acl(ObjectCannedACL.PUBLIC_READ)
-                                .build(),
-                        AsyncRequestBody.fromPublisher(body));
-        return Mono.fromFuture(future).map(response -> {
-            checkResult(response);
-
-            LOG.info("check response and returning fileKey: {}", fileKey);
-            return fileKey;
-        });
+                LOG.info("check response and returning fileKey: {}", fileKey);
+                return fileKey;
+            });
     }
 
     @Override
-    public Mono<String> createThumbnail(String fileKey) {
-        LOG.info("Create thumbnail for fileKey: {}", fileKey);
+    public Mono<String> createPhotoThumbnail(final URL presignedUrl, final String prefixPath) {
+        LOG.info("Create thumbnail for photo presignedUrl: {}", presignedUrl);
         LocalDateTime localDateTime = LocalDateTime.now();
 
+        ByteArrayOutputStream byteArrayOutputStream = getPhotoByteArrayOutputStream(presignedUrl);
 
-        ByteArrayOutputStream byteArrayOutputStream = createThumbnail(fileKey, "png");
+        if (byteArrayOutputStream == null) {
+            LOG.error("byteArrayOutputStream is null from getPhotoByteArrayOutputStream call");
+            return Mono.just("failed to create thumbnail for photo");
+        }
 
-        LOG.info("create ByteBuffer");
+        String thumbKey = prefixPath + "thumbnail/" + localDateTime + "." + "png";
+        return saveContentBytesToS3(byteArrayOutputStream, thumbKey);
+
+    }
+
+    private Mono<String> saveContentBytesToS3(ByteArrayOutputStream byteArrayOutputStream, final String fileKey) {
         byte[] bytes = byteArrayOutputStream.toByteArray();
-
         ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
 
-        String thumbKey = s3config.getVideoPath() + "thumbnail/" + localDateTime + "." + "png";
-        Map<String, String> metadata2 = new HashMap<>();
-        metadata2.put("Content-Length", "" + bytes.length);
-        metadata2.put("Content-Type", "image/png");
-        metadata2.put("x-amz-acl", "public-read");
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("Content-Length", "" + bytes.length);
+        metadata.put("Content-Type", "image/png");
+        metadata.put("x-amz-acl", "public-read");
 
-        LOG.info("saving thumbnail with key: {}", thumbKey);
+        LOG.info("saving thumbnail with key: {}", fileKey);
         CompletableFuture future = s3client
                 .putObject(PutObjectRequest.builder()
                                 .bucket(s3config.getBucket())
                                 .contentLength((long) bytes.length)
-                                .key(thumbKey)
+                                .key(fileKey)
                                 .contentType("image/png")
-                                .metadata(metadata2)
+                                .metadata(metadata)
                                 .acl(ObjectCannedACL.PUBLIC_READ)
                                 .build(),
                         AsyncRequestBody.fromPublisher(Flux.just(byteBuffer)));
@@ -153,29 +153,27 @@ public class S3FileUploadService implements S3Service {
 
             LOG.info("checked thumbnail response and returning fileKey: {}", response.toString());
 
-            return thumbKey;
+            return fileKey;
         });
     }
 
     @Override
-    public Mono<String> createGif(String fileKey) {
+    public Mono<String> createGif(URL presignedUrl, final String prefixPath) {
         try {
-            InputStream inputStream = new URL(s3config.getSubdomain() + fileKey).openStream();
+            InputStream inputStream = presignedUrl.openStream();//new URL(s3config.getSubdomain() + fileKey).openStream();
             File tempFile = File.createTempFile(UUID.randomUUID().toString(), ".gif");
-            getGifBytes(inputStream, 0, 2, 10, 2, new FileOutputStream(tempFile));
+
+            getGifBytes(inputStream, 0, 2, 2, 2, new FileOutputStream(tempFile));//);
 
             LocalDateTime localDateTime = LocalDateTime.now();
 
-            String gifKey = s3config.getVideoPath() + "gif/" + localDateTime + "." + "gif";
+            String gifKey = prefixPath + "gif/" + localDateTime + "." + "gif";
             Map<String, String> metadata2 = new HashMap<>();
             metadata2.put("Content-Length", "" + tempFile.length());
             metadata2.put("Content-Type", "image/gif");
             metadata2.put("x-amz-acl", "public-read");
 
             LOG.info("saving thumbnail with key: {}", gifKey);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            FileOutputStream fileOutputStream = new FileOutputStream(tempFile);
-
 
             CompletableFuture future = s3client
                     .putObject(PutObjectRequest.builder()
@@ -187,13 +185,22 @@ public class S3FileUploadService implements S3Service {
                                     .acl(ObjectCannedACL.PUBLIC_READ)
                                     .build(),
                            tempFile.toPath());
-            return Mono.fromFuture(future).map(response -> {
-                checkResult(response);
+                           // AsyncRequestBody.fromPublisher(Flux.just(byteBuffer)));
+            LOG.info("future: {}", future);
 
-                LOG.info("checked gifKey response and returning gifKey: {}", response.toString());
+            if (future == null) {
+                LOG.warn("future is null, happens during test code because we are using a tempFile.toPath instead.");
+                return Mono.just(gifKey);
+            }
+            else {
+                return Mono.fromFuture(future).map(response -> {
+                    checkResult(response);
 
-                return gifKey;
-            });
+                    LOG.info("checked gifKey response and returning gifKey: {}", response.toString());
+
+                    return gifKey;
+                });
+            }
 
         }
         catch (Exception e) {
@@ -203,8 +210,9 @@ public class S3FileUploadService implements S3Service {
     }
 
     @Override
-    public Mono<String> createPresignedUrl(Mono<String> fileKeyMono) {
+    public Mono<URL> createPresignedUrl(Mono<String> fileKeyMono) {
         LOG.info("create presignurl for key");
+        LOG.info("s3Client: {}", s3client);
 
         return fileKeyMono.flatMap(fileKey -> {
 
@@ -218,7 +226,7 @@ public class S3FileUploadService implements S3Service {
                     s3Presigner.presignGetObject(getObjectPresignRequest);
 
             LOG.info("Presigned URL: {}", presignedGetObjectRequest.url());
-            return Mono.just(presignedGetObjectRequest.url().toString());
+            return Mono.just(presignedGetObjectRequest.url());
         });
     }
 
@@ -234,20 +242,12 @@ public class S3FileUploadService implements S3Service {
         return result;
     }
 
-    /*  LOG.info("fileKey: {}, endpoint: {}", fileKey, s3config.getSubdomain());
-      GetObjectRequest request = GetObjectRequest.builder()
-              .bucket(s3config.getBucket())
-              .key(fileKey)
-              .build();
-
-      return s3client.getObject(request, new FluxResponseProvider()).get().flux.
-              map(byteBuffer -> new ByteArrayInputStream(byteBuffer.array()))
-              .map(byteArrayInputStream -> )
-              */
-    public ByteArrayOutputStream createThumbnail(String fileKey, String imageFormat)  {
+    public ByteArrayOutputStream getVideoByteArrayOutputStream(String fileKey, String imageFormat)  {
 
         try {
-            InputStream inputStream = new URL(s3config.getSubdomain() + fileKey).openStream();
+            URI uri = s3config.getSubdomain().resolve("/" + fileKey);
+
+            InputStream inputStream = uri.toURL().openStream();
             return getThumbnailBytes(inputStream, imageFormat);
         }
         catch (Exception e) {
@@ -297,6 +297,47 @@ public class S3FileUploadService implements S3Service {
         return null;
     }
 
+    private ByteArrayOutputStream getPhotoByteArrayOutputStream(final URL presignedUrl) {
+        try {
+            InputStream inputStream = presignedUrl.openStream();
+            // Load the original image
+            BufferedImage originalImage = ImageIO.read(inputStream);
+
+            // Set the thumbnail size
+            int thumbnailWidth = 100;
+            int thumbnailHeight = 100;
+
+            // Create a new image for the thumbnail
+            BufferedImage thumbnailImage = new BufferedImage(thumbnailWidth, thumbnailHeight, BufferedImage.TYPE_INT_RGB);
+
+            // Get the graphics context of the thumbnail image
+            Graphics2D graphics = thumbnailImage.createGraphics();
+
+            // Set rendering hints for better quality
+            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // Draw the original image onto the thumbnail image, scaling it to fit
+            graphics.drawImage(originalImage, 0, 0, thumbnailWidth, thumbnailHeight, null);
+            graphics.dispose();
+
+            // Save the thumbnail image
+            File outputFile = new File("thumbnail.jpg");
+            ImageIO.write(thumbnailImage, "jpg", outputFile);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(thumbnailImage, "jpg", baos);
+
+            LOG.info("Thumbnail created successfully.");
+
+            return baos;
+
+        } catch (IOException e) {
+            LOG.error("failed to create thumbnail for photo", e);
+            return null;
+        }
+    }
 
     private void getGifBytes(InputStream inputStream, int startFrame, int frameCount, Integer frameRate, Integer margin, OutputStream outputStream) {
         try {
@@ -336,11 +377,19 @@ public class S3FileUploadService implements S3Service {
 
             frameGrabber.stop();
             frameGrabber.close();
-
         } catch (Exception e) {
             LOG.error("failed to create gif for video", e);
         }
     }
 
+    public Mono<String> createVideoThumbnail(String fileKey, final String prefixPath) {
+        LOG.info("Create thumbnail for video fileKey: {}", fileKey);
+        LocalDateTime localDateTime = LocalDateTime.now();
+
+        ByteArrayOutputStream byteArrayOutputStream = getVideoByteArrayOutputStream(fileKey, "png");
+
+        String thumbKey = prefixPath + "thumbnail/" + localDateTime + "." + "png";
+        return saveContentBytesToS3(byteArrayOutputStream, thumbKey);
+    }
 
 }
