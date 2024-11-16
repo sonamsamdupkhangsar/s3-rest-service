@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.json.JacksonJsonParser;
 import org.springframework.boot.json.JsonParser;
+import org.springframework.context.annotation.ComponentScan;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -31,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * This will create a pact using {@link JwtAuthConsumerIntegTest#createPact(PactDslWithProvider)}
  * The pact is then published using `mvn pact:publish command
  */
-
+@ComponentScan({ "cloud.sonam" })
 @ExtendWith(PactConsumerTestExt.class)
 @PactTestFor(providerName = "jwt-rest-service")
 public class JwtAuthConsumerIntegTest {
@@ -76,6 +77,10 @@ public class JwtAuthConsumerIntegTest {
         return jsonString;
     }
 
+    @Test
+    public void hello() {
+        assertThat("hello").isEqualTo("hello");
+    }
     /**
      * The following will send a Authorization header to the mock server.
      * This will then assert that we get 200 http response, and assert the

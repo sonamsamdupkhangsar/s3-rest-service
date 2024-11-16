@@ -1,7 +1,7 @@
 package me.sonam.s3;
 
-import me.sonam.s3.config.S3ClientConfigurationProperties;
-import me.sonam.s3.file.S3FileUploadService;
+import cloud.sonam.s3.config.S3ClientConfigurationProperties;
+import cloud.sonam.s3.file.S3FileUploadService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,8 +15,10 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -39,7 +41,7 @@ import static org.mockito.Mockito.when;
 /**
  * this test will upload file to s3 bucket using the router
  */
-
+@ComponentScan({ "cloud.sonam" })
 @EnableAutoConfiguration
 @RunWith(SpringRunner.class)
 @ExtendWith(SpringExtension.class)

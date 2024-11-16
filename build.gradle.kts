@@ -29,13 +29,14 @@ dependencies {
     testImplementation("au.com.dius:pact-jvm-consumer-junit5:4.0.10")
     testImplementation("au.com.dius:pact-jvm-provider-junit5:4.0.10")
     implementation("org.projectlombok:lombok:1.18.20")
+    implementation("cloud.sonam:digitalocean-s3-lib:1.0.0-SNAPSHOT")
 
 }
 
 group = "me.sonam"
 version = "1.0-SNAPSHOT"
 description = "s3-rest-service"
-java.sourceCompatibility = JavaVersion.VERSION_21
+//java.sourceCompatibility = JavaVersion.VERSION_21
 
 publishing {
     publications.create<MavenPublication>("maven") {
@@ -49,4 +50,10 @@ tasks.withType<JavaCompile>() {
 
 tasks.withType<Javadoc>() {
     options.encoding = "UTF-8"
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }

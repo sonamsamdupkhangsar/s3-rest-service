@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import me.sonam.s3.file.S3Handler;
+import cloud.sonam.s3.file.S3Handler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.RouterOperation;
@@ -51,7 +51,7 @@ public class Router {
     public RouterFunction<ServerResponse> route(S3Handler handler) {
         LOG.info("building router function");
         return RouterFunctions.route(POST("/upload").and(accept(MediaType.APPLICATION_JSON)),
-                handler::handlerFileupload)
+                handler::upload)
                 .andRoute(POST("/presignurl").and(accept(MediaType.APPLICATION_JSON)),
                         handler::getPresignUrl);
     }
